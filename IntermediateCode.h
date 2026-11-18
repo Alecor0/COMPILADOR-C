@@ -233,10 +233,11 @@ private:
                 const string baseOp = n->op.substr(0, n->op.size() - 1);
                 if (!binOpFromText(baseOp, bop))
                     throw std::runtime_error("Generacion IR (linea " + std::to_string(n->line) + "): operador de asignacion no soportado '" + n->op + "'.");
-                Operand old = snapshot(tgt, n->line);       // el valor previo se lee antes de evaluar el lado derecho
+                // C++17 [expr.ass]: en E1 op= E2, E2 se evalua antes que E1; el valor
+                // previo de la variable se lee despues de los efectos del lado derecho.
                 Operand value = expression(n->a.at(1));
                 IRInstr& i = emit(IROp::Binary, n->line);
-                i.dst = newTemp(); i.a = old; i.b = value; i.text = baseOp;
+                i.dst = newTemp(); i.a = tgt; i.b = value; i.text = baseOp;
                 Operand computed = i.dst;
                 emitMove(tgt, computed, n->line);
                 return tgt;

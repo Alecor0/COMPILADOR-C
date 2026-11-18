@@ -112,6 +112,8 @@ public:
                 if (peek() == 'p' || peek() == 'P') {
                     floating = true; lexeme += advance();
                     if (peek() == '+' || peek() == '-') lexeme += advance();
+                    if (!std::isdigit((unsigned char)peek()))
+                        return {UNKNOWN, "literal numerico mal formado: el exponente no tiene digitos ('" + lexeme + "')", ln};
                     takeDigits([](int x){ return std::isdigit(x) != 0; });
                 }
             } else if (c == '0' && (peek(1) == 'b' || peek(1) == 'B')) {
@@ -124,6 +126,8 @@ public:
                 if (peek() == 'e' || peek() == 'E') {
                     floating = true; lexeme += advance();
                     if (peek() == '+' || peek() == '-') lexeme += advance();
+                    if (!std::isdigit((unsigned char)peek()))
+                        return {UNKNOWN, "literal numerico mal formado: el exponente no tiene digitos ('" + lexeme + "')", ln};
                     takeDigits([](int x){ return std::isdigit(x) != 0; });
                 }
             }

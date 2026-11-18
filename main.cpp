@@ -481,15 +481,16 @@ static int compileFile(const string& inputPath, bool explained, const string& ou
             log << "  --- inicio de la salida del programa ---\n";
         }
         VirtualMachine vm(module, std::cout);
-        vm.run();
+        const int exitCode = vm.run();
         std::cout.flush();
         if (!std::cout) throw std::runtime_error("Fallo al escribir en la salida estandar.");
         if (explained) {
             log << "  --- fin de la salida del programa ---\n"
                 << "  Instrucciones ejecutadas por la VM: " << vm.stepsExecuted() << "\n"
+                << "  Codigo de salida de main: " << exitCode << "\n"
                 << "\nCompilacion y ejecucion completadas con exito.\n";
         }
-        return 0;
+        return exitCode;   // como un ejecutable C++: el valor devuelto por main
     } catch (const std::exception& e) {
         std::cout.flush();
         std::cerr << "[ERROR] " << e.what() << "\n";
@@ -593,7 +594,7 @@ int main(int argc, char** argv) {
         if (targets.size() > 1) std::cout << "\n=== " << fs::path(target).filename().string() << " ===\n";
         const int rc = nativeMode ? nativeFile(target, explained, outputPath)
                                   : compileFile(target, explained, outputPath);
-        if (rc > worst) worst = rc;
+        if (worst == 0 && rc != 0) worst = rc;   // primer codigo distinto de cero
     }
     return worst;
 }

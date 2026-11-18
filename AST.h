@@ -92,3 +92,7 @@ struct Node {
     static NP mk(NK k, int line) { return std::make_shared<Node>(k, line); }
     static NP mkLit(const Value& v, int line) { auto n = mk(NK::Lit, line); n->val = v; return n; }
 };
+
+// Nombre interno de la unidad que agrupa las funciones globales. No es un
+// identificador valido de C++, asi que ninguna clase del usuario puede llamarse asi.
+static const char* const GLOBAL_UNIT_NAME = "<global>";

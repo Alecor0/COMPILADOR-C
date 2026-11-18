@@ -17,7 +17,7 @@ class Parser {
 private:
     vector<Token> toks;
     size_t p = 0;
-    bool suppressStreamShift = false; // evita confundir cout << valor con el operador de desplazamiento
+    static constexpr int STREAM_OPERAND_PREC = 9; // primer nivel por encima de '<<' / '>>' (8)
 
     const Token& cur() const { return toks[p]; }
     const Token& at(size_t o) const { return toks[std::min(p + o, toks.size() - 1)]; }
@@ -106,17 +106,16 @@ private:
         return q < toks.size() && toks[q].type == IDENTIFIER;
     }
 
+    // Operando de cout << ...: en C++ solo los operadores con mas precedencia que
+    // '<<' (aritmeticos, unarios, llamadas) forman parte del operando. Cualquier
+    // otro ('<', '==', '&', '=', '?:'...) se aplicaria al flujo y no es valido aqui.
     NP parseStreamExpr() {
-        const bool old = suppressStreamShift;
-        suppressStreamShift = true;
-        try {
-            NP value = parseExpr();
-            suppressStreamShift = old;
-            return value;
-        } catch (...) {
-            suppressStreamShift = old;
-            throw;
-        }
+        NP value = parseBinary(STREAM_OPERAND_PREC);
+        if (cur().type == OPERATOR && !isOp("<<"))
+            failMsg("el operador '" + cur().value + "' se aplicaria a std::cout; use parentesis: cout << (expresion)");
+        if (isSym("?"))
+            failMsg("el operador '?:' se aplicaria a std::cout; use parentesis: cout << (expresion)");
+        return value;
     }
 
     static string canonicalOperator(string op) {
@@ -463,13 +462,12 @@ private:
     int prec(const Token& t) const {
         if (t.type != OPERATOR) return 0;
         const string& v = t.value;
-        if (suppressStreamShift && (v == "<<" || v == ">>")) return 0;
         if (v == "||" || v == "or") return 1;
         if (v == "&&" || v == "and") return 2;
         if (v == "|" || v == "bitor") return 3;
         if (v == "^" || v == "xor") return 4;
         if (v == "&" || v == "bitand") return 5;
-        if (v == "==" || v == "!=") return 6;
+        if (v == "==" || v == "!=" || v == "not_eq") return 6;
         if (v == "<" || v == ">" || v == "<=" || v == ">=") return 7;
         if (v == "<<" || v == ">>") return 8;
         if (v == "+" || v == "-") return 9;
@@ -621,11 +619,15 @@ private:
             case NUMBER: {
                 long long v = 0;
                 string raw = numericCore(t.value, false);
+                const bool binary = raw.size() >= 2 && raw[0] == '0' && (raw[1] == 'b' || raw[1] == 'B');
+                const string digits = binary ? raw.substr(2) : raw;
+                size_t used = 0;
                 try {
-                    if (raw.size() > 2 && raw[0] == '0' && (raw[1] == 'b' || raw[1] == 'B'))
-                        v = std::stoll(raw.substr(2), nullptr, 2);
-                    else v = std::stoll(raw, nullptr, 0); // decimal, octal o hexadecimal
+                    v = std::stoll(digits, &used, binary ? 2 : 0); // binario, o decimal/octal/hexadecimal
                 } catch (const std::exception&) { failMsg("literal entero fuera de rango o mal formado: " + t.value); }
+                // stoll se detiene en el primer caracter invalido (p. ej. el 8 de "08"): todo
+                // el literal debe consumirse, como exige C++.
+                if (used != digits.size()) failMsg("literal entero mal formado: " + t.value);
                 if (v > 2147483647LL) failMsg("literal entero fuera del rango int del interprete: " + t.value);
                 p++;
                 return Node::mkLit(Value::Int(v), ln);
@@ -633,8 +635,10 @@ private:
             case DOUBLE_LIT: {
                 double d = 0;
                 string raw = numericCore(t.value, true);
-                try { d = std::stod(raw); }
+                size_t used = 0;
+                try { d = std::stod(raw, &used); }
                 catch (const std::exception&) { failMsg("literal decimal fuera de rango o mal formado: " + t.value); }
+                if (used != raw.size()) failMsg("literal decimal mal formado: " + t.value);
                 if (std::isinf(d)) failMsg("literal decimal fuera de rango: " + t.value);
                 p++;
                 return Node::mkLit(Value::Dbl(d), ln);
@@ -664,10 +668,7 @@ private:
             case SYMBOL:
                 if (t.value == "(") {
                     p++;
-                    const bool old = suppressStreamShift; suppressStreamShift = false;
-                    NP e;
-                    try { e = parseExpr(); suppressStreamShift = old; }
-                    catch (...) { suppressStreamShift = old; throw; }
+                    NP e = parseExpr();
                     expectSym(")");
                     return e;
                 }
@@ -707,7 +708,7 @@ public:
         while (cur().type == KEYWORD && cur().value == "using" && at(1).type == KEYWORD && at(1).value == "namespace" && at(2).type == IDENTIFIER && at(2).value == "std") { p += 3; expectSym(";"); }
         // C++: funciones globales (por ahora se admite una funcion main como punto de entrada).
         if (isTypeStartAt(p, true)) {
-            auto c = Node::mk(NK::Class, cur().line); c->name = "Programa";
+            auto c = Node::mk(NK::Class, cur().line); c->name = GLOBAL_UNIT_NAME;
             while (cur().type != END_OF_FILE) {
                 if (cur().type == KEYWORD && cur().value == "using" && at(1).type == KEYWORD && at(1).value == "namespace" && at(2).type == IDENTIFIER && at(2).value == "std") { p += 3; expectSym(";"); continue; }
                 int ln = cur().line;

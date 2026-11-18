@@ -136,7 +136,12 @@ static Value binaryOp(int line, BinOp op, const Value& l, const Value& r) {
                 if (b < 0 || b >= 32) rtError(line, "cantidad de desplazamiento fuera del rango 0..31.");
                 if (op == BinOp::Shl) {
                     if (a < 0) rtError(line, "desplazamiento a la izquierda de un int negativo no es valido en C++17.");
-                    return Value::Int(checkedInt(line, a * (1LL << static_cast<unsigned>(b))));
+                    // C++17 [expr.shift]/2: si a*2^b es representable en unsigned int, el
+                    // resultado es ese valor convertido a int (1 << 31 == INT_MIN).
+                    const long long shifted = a * (1LL << static_cast<unsigned>(b));
+                    if (shifted > static_cast<long long>(UINT32_MAX))
+                        rtError(line, "desbordamiento de int en desplazamiento a la izquierda.");
+                    return Value::Int(static_cast<int32_t>(static_cast<uint32_t>(shifted)));
                 }
                 // Para int negativo se usa desplazamiento aritmetico (comportamiento comun de GCC/Clang).
                 const uint32_t ua = static_cast<uint32_t>(static_cast<int32_t>(a));

@@ -4,6 +4,8 @@
 // infinita produce un error controlado en lugar de un desbordamiento de pila.
 #include "ObjectCodeGenerator.h"
 #include <iostream>
+#include <locale>
+#include <sstream>
 #include <unordered_map>
 
 class VirtualMachine {
@@ -71,19 +73,35 @@ private:
         return chosen;
     }
 
-    static Frame makeFrame(const BCFunction* fn) {
+    // Tipo declarado de cada slot. Los nombres son unicos por funcion, asi que el
+    // tipo es estatico: se conoce aunque un salto (p. ej. un case de switch) pase
+    // por encima de la instruccion DECLARE, igual que en C++.
+    std::unordered_map<const BCFunction*, vector<uint8_t>> slotTypes;
+
+    Frame makeFrame(const BCFunction* fn) const {
         Frame f; f.fn = fn; f.pc = fn->entry;
-        f.slots.resize(fn->nslots); f.init.assign(fn->nslots, 0); f.type.assign(fn->nslots, T_NONE);
+        f.slots.resize(fn->nslots); f.init.assign(fn->nslots, 0);
+        f.type = slotTypes.at(fn);
         return f;
     }
 
 public:
     VirtualMachine(const BCModule& m, std::ostream& o) : mod(m), out(o) {
-        for (const auto& f : mod.funcs) if (f.name != "main") byName[f.name].push_back(&f);
+        for (const auto& f : mod.funcs) {
+            if (f.name != "main") byName[f.name].push_back(&f);
+            vector<uint8_t> types(f.nslots, T_NONE);
+            for (size_t k = 0; k < f.params.size() && k < types.size(); ++k) types[k] = f.params[k];
+            for (uint32_t pc = f.entry; pc <= f.end; ++pc) {
+                const BCInstr& in = mod.code[pc];
+                if (static_cast<Opc>(in.op) == Opc::Declare && in.dst >= 0) types[static_cast<size_t>(in.dst)] = in.sub;
+            }
+            slotTypes[&f] = std::move(types);
+        }
     }
     unsigned long long stepsExecuted() const { return steps; }
 
-    void run() {
+    // Ejecuta main y devuelve su codigo de salida.
+    int run() {
         const BCFunction* mainFn = nullptr;
         for (const auto& f : mod.funcs) if (f.name == "main") mainFn = &f;
         if (!mainFn) throw std::runtime_error("Error de ejecucion: no existe la funcion 'main'.");
@@ -97,7 +115,7 @@ public:
             if (++steps > MAX_STEPS) rtError(in.line, "limite de ejecucion excedido (posible bucle infinito).");
             switch (static_cast<Opc>(in.op)) {
                 case Opc::Declare:
-                    f.type[in.dst] = in.sub; f.init[in.dst] = 0;
+                    f.init[in.dst] = 0;      // el tipo del slot ya es conocido (slotTypes)
                     break;
                 case Opc::Move: {
                     Value v = read(f, in.a, in.line);
@@ -125,6 +143,13 @@ public:
                     const Value& v = read(f, in.a, in.line);
                     if (v.t == Value::V_VOID) rtError(in.line, "cout no puede insertar una expresion void.");
                     if (v.t == Value::BOOL) out << (v.b ? 1 : 0);
+                    else if (v.t == Value::DOUBLE) {
+                        // Mismo formato que std::cout por defecto: %g con 6 cifras significativas.
+                        std::ostringstream text;
+                        text.imbue(std::locale::classic());
+                        text << v.d;
+                        out << text.str();
+                    }
                     else out << toStr(v);
                     break;
                 }
@@ -161,7 +186,12 @@ public:
                 case Opc::Ret:
                 case Opc::FnEnd: {
                     const bool explicitReturn = static_cast<Opc>(in.op) == Opc::Ret;
-                    if (stack.size() == 1) return;          // main termina (C++ devuelve 0 implicitamente)
+                    if (stack.size() == 1) {
+                        // main termina: su valor es el codigo de salida (0 si no hay return).
+                        if (explicitReturn && in.a != NO_OPERAND)
+                            return static_cast<int>(coerceTo(in.line, T_INT, read(f, in.a, in.line)).i);
+                        return 0;
+                    }
                     const BCFunction* fn = f.fn;
                     const int callLine = f.callLine;
                     const int32_t retDst = f.retDst;

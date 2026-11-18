@@ -68,8 +68,14 @@ private:
         else if (n->op == "&") r = a & b;
         else if (n->op == "|") r = a | b;
         else if (n->op == "^") r = a ^ b;
-        else if (n->op == "<<") { if (b < 0 || b >= 31 || a < 0) return false; r = a * (1LL << static_cast<unsigned>(b)); }
-        else if (n->op == ">>") { if (b < 0 || b >= 31) return false; r = a >> b; }
+        else if (n->op == "<<") {
+            // C++17: valido si a*2^b cabe en unsigned int; se convierte de vuelta a int.
+            if (b < 0 || b >= 32 || a < 0) return false;
+            r = a * (1LL << static_cast<unsigned>(b));
+            if (r > static_cast<long long>(UINT32_MAX)) return false;
+            r = static_cast<int32_t>(static_cast<uint32_t>(r));
+        }
+        else if (n->op == ">>") { if (b < 0 || b >= 32) return false; r = a >> b; }
         else if (n->op == "==") r = a == b;
         else if (n->op == "!=") r = a != b;
         else if (n->op == "<") r = a < b;
@@ -159,6 +165,8 @@ private:
                     if ((lt != "int" && lt != "bool") || (rt != "int" && rt != "bool")) opErr(n, n->op, lt, rt);
                 } else if (!isNum(lt) || !isNum(rt)) {
                     opErr(n, n->op, lt, rt);
+                } else if (n->op == "%=" && (lt == "double" || rt == "double")) {
+                    opErr(n, n->op, lt, rt);   // igual que '%': no admite operandos double
                 }
                 return lt;
             }
@@ -216,11 +224,32 @@ private:
         return *best;
     }
 
+    // true si la sentencia puede ejecutar un 'break' que salga del bucle o switch
+    // que la contiene (los break de bucles o switch anidados no cuentan).
+    static bool mayBreak(const NP& n) {
+        if (!n) return false;
+        switch (n->k) {
+            case NK::Break: return true;
+            case NK::Block:
+                for (const auto& child : n->a) if (mayBreak(child)) return true;
+                return false;
+            case NK::If:
+                for (size_t i = 1; i < n->a.size(); ++i) if (mayBreak(n->a[i])) return true;
+                return false;
+            default: return false;   // While, DoWhile, For y Switch capturan sus propios break
+        }
+    }
+
     static bool alwaysReturns(const NP& n) {
         if (!n) return false;
         if (n->k == NK::Return) return true;
         if (n->k == NK::Block) {
-            for (const auto& child : n->a) if (alwaysReturns(child)) return true;
+            // Las sentencias se ejecutan en orden: un return garantiza el retorno
+            // solo si ningun break anterior puede abandonar el bloque antes.
+            for (const auto& child : n->a) {
+                if (alwaysReturns(child)) return true;
+                if (mayBreak(child)) return false;
+            }
             return false;
         }
         if (n->k == NK::If && n->a.size() == 3)
@@ -240,7 +269,7 @@ private:
                     for (size_t j = firstBody; j < section->a.size(); ++j) {
                         const NP& statement = section->a[j];
                         if (alwaysReturns(statement)) { returns = true; break; }
-                        if (statement && statement->k == NK::Break) return false;
+                        if (mayBreak(statement)) return false;
                     }
                 }
                 if (!returns) return false;
@@ -306,10 +335,10 @@ private:
                 break;
             case NK::While:
                 cond(n->a[0]);
-                loopDepth++; breakDepth++; body(n->a[1]); breakDepth--;
+                loopDepth++; breakDepth++; body(n->a[1]); breakDepth--; loopDepth--;
                 break;
             case NK::DoWhile:
-                loopDepth++; breakDepth++; body(n->a[0]); breakDepth--;
+                loopDepth++; breakDepth++; body(n->a[0]); breakDepth--; loopDepth--;
                 cond(n->a[1]);
                 break;
             case NK::For:
@@ -383,7 +412,7 @@ public:
 
         // Primera pasada: registrar todas las firmas, para permitir llamadas antes de la definicion.
         for (const auto& c : prog->a) {
-            if (c->name != "Programa") err(c, "Las clases C++ aun no estan implementadas; esta version admite funciones globales.");
+            if (c->name != GLOBAL_UNIT_NAME) err(c, "Las clases C++ aun no estan implementadas; esta version admite funciones globales.");
             for (const auto& m : c->a) {
                 if (m->k != NK::Method)
                     err(m, string("Miembro no soportado: ") + nkName(m->k) + " '" + m->name + "'.");

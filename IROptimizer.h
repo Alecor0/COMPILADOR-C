@@ -211,6 +211,10 @@ private:
                     out.push_back(i);
                     continue;
                 }
+                // Un DECLARE inalcanzable se conserva: el ambito y el tipo de la variable
+                // son estaticos en C++ (p. ej. 'case 0: int x; ... case 1: x = d;'), y tanto
+                // el optimizador como la VM obtienen el tipo del slot de esa declaracion.
+                if (dead && i.op == IROp::Declare) { out.push_back(i); continue; }
                 if (dead) { ++stats.unreachable; changed = true; continue; }
                 out.push_back(i);
                 if (i.op == IROp::Jump || i.op == IROp::Return) dead = true;
