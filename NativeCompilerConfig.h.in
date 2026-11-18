@@ -1,0 +1,6 @@
+#pragma once
+
+// Ruta absoluta al compilador anfitrión que CMake utilizó para construir
+// esta herramienta. El backend nativo reutiliza exactamente esa toolchain.
+#define CPP_NATIVE_COMPILER R"cppcfg(@CMAKE_CXX_COMPILER@)cppcfg"
+#cmakedefine CPP_NATIVE_MSVC 1

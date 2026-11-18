@@ -1,0 +1,64 @@
+COMPILADOR C++17 - INSTRUCCIONES DE USO
+=======================================
+
+1. COMPILAR
+
+  cmake -S . -B build -DSTRICT_SANITIZE=OFF
+  cmake --build build
+
+  (Windows: cmake -S . -B build && cmake --build build --config Release)
+
+2. CARPETA "codigos"
+
+  Coloca tus archivos .cpp en la carpeta "codigos" (junto a este archivo). El programa
+  la busca en el directorio actual, junto al ejecutable y en la carpeta del proyecto.
+
+  ./build/CppCompiler                 sin archivo: si hay uno solo lo usa; si hay varios
+                                      pregunta cual (en una terminal)
+  ./build/CppCompiler ejemplo         busca ejemplo.cpp en el directorio actual y en codigos
+  ./build/CppCompiler --todos         procesa todos los .cpp de codigos
+  ./build/CppCompiler --listar        lista los archivos de codigos
+  ./build/CppCompiler ruta/mi.cpp     tambien acepta una ruta cualquiera
+
+3. TIPO DE SALIDA
+
+  --simple      solo la salida del programa
+  --explained   las seis fases y la ejecucion:
+                  [1/6] analisis lexico (tokens)
+                  [2/6] analisis sintactico (AST)
+                  [3/6] analisis semantico (tabla de simbolos)
+                  [4/6] codigo intermedio de tres direcciones (TAC)
+                  [5/6] optimizacion del codigo intermedio (con resumen por tipo)
+                  [6/6] codigo objeto binario CVM17 (listado y bytes)
+                  + ejecucion en la maquina virtual CVM17
+
+  Sin ninguna de las dos: en una terminal se pregunta (Enter = explicada); si la entrada
+  no es una terminal (scripts, pruebas) se usa la salida simple.
+
+4. COMO SE USAN LAS FASES
+
+  El programa se ejecuta SIEMPRE a traves de las fases 4, 5 y 6: el codigo intermedio se
+  optimiza, se codifica como binario CVM17 y la maquina virtual ejecuta ese binario
+  (leido de vuelta desde los bytes y verificado antes de ejecutar).
+
+  En modo explicado se guardan en la carpeta "salida":
+    nombre.ir        codigo intermedio original (TAC)
+    nombre.opt.ir    codigo intermedio optimizado
+    nombre.cobj      objeto binario CVM17
+    nombre.obj.txt   desensamblado legible del objeto
+  En modo simple no se escribe ningun archivo, salvo que indiques -o prefijo.
+
+5. OBJETO NATIVO
+
+  ./build/CppCompiler --native mi.cpp -o mi.o
+
+  Delega en el compilador C++ del sistema y genera un objeto ELF/COFF real.
+  Acepta --simple / --explained, y tambien nombres de la carpeta codigos.
+
+6. ALCANCE
+
+  Subconjunto de C++17: funciones y sobrecarga, int/double/bool/std::string,
+  if/for/while/do/switch, ternario, std::cout. No hay arreglos, variables globales con
+  inicializacion, metodos miembro ni std::cin.
+  Limites de ejecucion: 100 millones de instrucciones de VM y 20000 llamadas anidadas;
+  al excederlos se muestra un error de ejecucion controlado.
