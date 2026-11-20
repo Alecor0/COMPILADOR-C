@@ -9,7 +9,7 @@ add_executable(CppCompiler main.cpp)
 if(MSVC)
     set(CPP_NATIVE_MSVC 1)
 endif()
-configure_file(NativeCompilerConfig.h.in NativeCompilerConfig.h @ONLY)
+configure_file(08_backend_nativo/NativeCompilerConfig.h.in NativeCompilerConfig.h @ONLY)
 target_include_directories(CppCompiler PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
 
 # Advertencias estrictas

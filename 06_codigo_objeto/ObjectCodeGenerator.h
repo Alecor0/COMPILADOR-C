@@ -10,7 +10,7 @@
 // Operando: >= 0 slot local de la funcion; < 0 constante (-(indice+1)); INT32_MIN = ninguno.
 // Las etiquetas desaparecen: los saltos llevan el indice absoluto de instruccion.
 // Este modulo lo ejecuta la maquina virtual (VirtualMachine.h); no es un objeto ELF/COFF.
-#include "IntermediateCode.h"
+#include "04_codigo_intermedio/IntermediateCode.h"
 #include <cstdint>
 #include <cstring>
 #include <fstream>

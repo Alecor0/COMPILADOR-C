@@ -130,21 +130,39 @@ Ideas que atraviesan todo el diseño:
 | Archivo | Responsabilidad |
 |---|---|
 | [main.cpp](main.cpp) | Línea de comandos, selección de archivos, encadenamiento de las fases y presentación del modo explicado. |
-| [Lexer.h](Lexer.h) | Reconoce un token a la vez (palabras clave, identificadores, números, cadenas, operadores). |
-| [Scanner.h](Scanner.h) | Recorre la fuente completa con el `Lexer` y convierte los tokens inválidos en errores léxicos. |
-| [AST.h](AST.h) | Tipo `Value` (valores en tiempo de compilación y ejecución) y nodos del árbol sintáctico. |
-| [Parser.h](Parser.h) | Análisis sintáctico descendente recursivo; construye el AST. |
-| [SymbolTable.h](SymbolTable.h) | Pila de ámbitos con nombre, tipo y constancia de cada variable. |
-| [Semantic.h](Semantic.h) | Comprobación de tipos, declaraciones, sobrecarga, retornos, bucles y `switch`. |
-| [IntermediateCode.h](IntermediateCode.h) | Traduce el AST a código de tres direcciones (TAC) e imprime su listado. |
-| [Runtime.h](Runtime.h) | Semántica de operadores, conversiones y errores de ejecución compartida. |
-| [IROptimizer.h](IROptimizer.h) | Optimizaciones sobre el TAC. |
-| [ObjectCodeGenerator.h](ObjectCodeGenerator.h) | Codifica el TAC como módulo binario CVM17, lo decodifica, lo valida y lo desensambla. |
-| [VirtualMachine.h](VirtualMachine.h) | Ejecuta el módulo CVM17. |
-| [NativeBackend.h](NativeBackend.h) | Invoca al compilador C++ del sistema para generar un objeto nativo. |
-| [NativeCompilerConfig.h.in](NativeCompilerConfig.h.in) | Plantilla que CMake rellena con la ruta del compilador anfitrión. |
+| [Lexer.h](01_lexico/Lexer.h) | Reconoce un token a la vez (palabras clave, identificadores, números, cadenas, operadores). |
+| [Scanner.h](01_lexico/Scanner.h) | Recorre la fuente completa con el `Lexer` y convierte los tokens inválidos en errores léxicos. |
+| [AST.h](02_sintactico/AST.h) | Tipo `Value` (valores en tiempo de compilación y ejecución) y nodos del árbol sintáctico. |
+| [Parser.h](02_sintactico/Parser.h) | Análisis sintáctico descendente recursivo; construye el AST. |
+| [SymbolTable.h](03_semantico/SymbolTable.h) | Pila de ámbitos con nombre, tipo y constancia de cada variable. |
+| [Semantic.h](03_semantico/Semantic.h) | Comprobación de tipos, declaraciones, sobrecarga, retornos, bucles y `switch`. |
+| [IntermediateCode.h](04_codigo_intermedio/IntermediateCode.h) | Traduce el AST a código de tres direcciones (TAC) e imprime su listado. |
+| [Runtime.h](04_codigo_intermedio/Runtime.h) | Semántica de operadores, conversiones y errores de ejecución compartida. |
+| [IROptimizer.h](05_optimizacion/IROptimizer.h) | Optimizaciones sobre el TAC. |
+| [ObjectCodeGenerator.h](06_codigo_objeto/ObjectCodeGenerator.h) | Codifica el TAC como módulo binario CVM17, lo decodifica, lo valida y lo desensambla. |
+| [VirtualMachine.h](07_maquina_virtual/VirtualMachine.h) | Ejecuta el módulo CVM17. |
+| [NativeBackend.h](08_backend_nativo/NativeBackend.h) | Invoca al compilador C++ del sistema para generar un objeto nativo. |
+| [NativeCompilerConfig.h.in](08_backend_nativo/NativeCompilerConfig.h.in) | Plantilla que CMake rellena con la ruta del compilador anfitrión. |
 | [CMakeLists.txt](CMakeLists.txt) | Construcción, advertencias estrictas y sanitizers opcionales. |
 | [codigos/](codigos) | Programas de ejemplo; el compilador busca aquí los archivos por defecto. |
+
+Los archivos están agrupados en carpetas numeradas en el orden en que el programa recorre
+el compilador (y en el que conviene exponerlo):
+
+```text
+main.cpp                     programa principal: encadena todas las fases
+01_lexico/                   Fase 1   Lexer.h, Scanner.h
+02_sintactico/               Fase 2   AST.h, Parser.h
+03_semantico/                Fase 3   SymbolTable.h, Semantic.h
+04_codigo_intermedio/        Fase 4   IntermediateCode.h, Runtime.h (semántica compartida)
+05_optimizacion/             Fase 5   IROptimizer.h
+06_codigo_objeto/            Fase 6   ObjectCodeGenerator.h
+07_maquina_virtual/          Ejecución VirtualMachine.h
+08_backend_nativo/           Opcional NativeBackend.h, NativeCompilerConfig.h.in
+codigos/                     programas de ejemplo
+```
+
+Los `#include` usan rutas desde la raíz del proyecto (por ejemplo `"01_lexico/Lexer.h"`).
 
 El orden de inclusión refleja las dependencias:
 `Lexer → Scanner`, `AST → Parser → Semantic`, `AST → Runtime → IntermediateCode → IROptimizer`,

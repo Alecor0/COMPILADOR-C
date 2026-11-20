@@ -2,7 +2,7 @@
 // Maquina virtual CVM17: ejecuta el modulo binario producido por la fase 6.
 // Usa una pila de marcos propia (sin recursion de C++), por lo que una recursion
 // infinita produce un error controlado en lugar de un desbordamiento de pila.
-#include "ObjectCodeGenerator.h"
+#include "06_codigo_objeto/ObjectCodeGenerator.h"
 #include <iostream>
 #include <locale>
 #include <sstream>

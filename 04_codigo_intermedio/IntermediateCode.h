@@ -5,8 +5,8 @@
 //  - Los operandos son estructurados (variable, temporal o constante), no cadenas.
 //  - && y || se compilan como saltos (cortocircuito); cada argumento de cout se
 //    imprime justo despues de evaluarse, igual que en C++17.
-#include "AST.h"
-#include "Runtime.h"
+#include "02_sintactico/AST.h"
+#include "04_codigo_intermedio/Runtime.h"
 #include <sstream>
 #include <iomanip>
 #include <map>

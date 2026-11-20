@@ -2,7 +2,7 @@
 // Semantica de valores compartida por el optimizador (plegado de constantes)
 // y por la maquina virtual CVM17. Un unico lugar define como se comporta cada
 // operacion, asi el codigo optimizado y el no optimizado nunca divergen.
-#include "AST.h"
+#include "02_sintactico/AST.h"
 #include <climits>
 #include <cmath>
 #include <stdexcept>

@@ -1,6 +1,6 @@
 #pragma once
-#include "Parser.h"
-#include "SymbolTable.h"
+#include "02_sintactico/Parser.h"
+#include "03_semantico/SymbolTable.h"
 #include <climits>
 #include <unordered_set>
 

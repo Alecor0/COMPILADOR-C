@@ -1,6 +1,6 @@
 #pragma once
-#include "Lexer.h"
-#include "AST.h"
+#include "01_lexico/Lexer.h"
+#include "02_sintactico/AST.h"
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>

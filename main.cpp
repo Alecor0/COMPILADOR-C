@@ -13,15 +13,15 @@
 #else
 #include <unistd.h>
 #endif
-#include "Scanner.h"
-#include "Parser.h"
-#include "SymbolTable.h"
-#include "Semantic.h"
-#include "IntermediateCode.h"
-#include "IROptimizer.h"
-#include "ObjectCodeGenerator.h"
-#include "VirtualMachine.h"
-#include "NativeBackend.h"
+#include "01_lexico/Scanner.h"
+#include "02_sintactico/Parser.h"
+#include "03_semantico/SymbolTable.h"
+#include "03_semantico/Semantic.h"
+#include "04_codigo_intermedio/IntermediateCode.h"
+#include "05_optimizacion/IROptimizer.h"
+#include "06_codigo_objeto/ObjectCodeGenerator.h"
+#include "07_maquina_virtual/VirtualMachine.h"
+#include "08_backend_nativo/NativeBackend.h"
 
 namespace fs = std::filesystem;
 

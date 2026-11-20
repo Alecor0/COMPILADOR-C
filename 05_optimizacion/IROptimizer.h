@@ -8,7 +8,7 @@
 //   4. Saltos condicionales con condicion constante.
 //   5. Codigo inalcanzable, encadenamiento de saltos, saltos al destino siguiente y etiquetas sin uso.
 //   6. Codigo muerto: temporales y variables que nunca se leen.
-#include "IntermediateCode.h"
+#include "04_codigo_intermedio/IntermediateCode.h"
 #include <map>
 #include <set>
 #include <algorithm>
